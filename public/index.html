@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leo - Your Shopping Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .chat-container {
+            background-color: #fff;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 16px;
+            text-align: center;
+            font-size: 1.5em;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+        }
+
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.leo {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 80%;
+            padding: 10px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background-color: #DCF8C6;
+            border-top-right-radius: 0;
+        }
+
+        .message.leo .message-content {
+            background-color: #E1E1E1;
+            border-top-left-radius: 0;
+        }
+
+        .chat-input {
+            display: flex;
+            border-top: 1px solid #ddd;
+        }
+
+        .chat-input textarea {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            resize: none;
+            font-size: 1em;
+            outline: none;
+        }
+
+        .chat-input button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0 24px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s;
+        }
+
+        .chat-input button:hover {
+            background-color: #45a049;
+        }
+
+        .loading {
+            font-style: italic;
+            color: #555;
+        }
+
+        @media (max-width: 600px) {
+            .chat-container {
+                height: 100vh;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            Leo - Your Shopping Assistant
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <!-- Messages will appear here -->
+        </div>
+        <div class="chat-input">
+            <textarea id="user-input" rows="2" placeholder="Enter purchase information..."></textarea>
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const sendButton = document.getElementById('send-button');
+        const userInput = document.getElementById('user-input');
+        const chatMessages = document.getElementById('chat-messages');
+
+        // Updated to your specific Vercel API endpoint
+        const API_ENDPOINT = 'https://leo-cyan.vercel.app/api/leo';
+
+        // Function to append messages to the chat
+        function appendMessage(sender, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.classList.add('message-content');
+            contentDiv.innerText = text;
+            
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Function to handle sending messages
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (text === '') return;
+
+            // Append user message
+            appendMessage('user', text);
+            userInput.value = '';
+
+            // Append loading message from Leo
+            appendMessage('leo', 'Leo is analyzing your purchase information...');
+
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ purchase_info: text }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Remove the loading message
+                chatMessages.removeChild(chatMessages.lastChild);
+
+                if (data.analysis) {
+                    appendMessage('leo', data.analysis);
+                } else if (data.error) {
+                    appendMessage('leo', `Error: ${data.error}`);
+                } else {
+                    appendMessage('leo', 'Unexpected response from Leo.');
+                }
+            } catch (error) {
+                // Remove the loading message
+                chatMessages.removeChild(chatMessages.lastChild);
+                appendMessage('leo', `Error: ${error.message}`);
+            }
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+
+        userInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
